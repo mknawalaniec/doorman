@@ -9,12 +9,12 @@ Setup
 -----
 Quite a few steps, needs cleanup, most of it can be automated.
 
-Using Cloud9 makes setup a breeze. If you create an instance, you might need to execute the following commands:
- - npm install -g serverless
- - sudo yum install jq
- - pip install --user pipenv
- - sudo pip install --upgrade awscli
- - sls plugin install -n serverless-python-requirements
+- Using Cloud9 makes setup a breeze. If you create an instance, you might need to execute the following commands:
+  - npm install -g serverless
+  - sudo yum install jq
+  - pip install --user pipenv
+  - sudo pip install --upgrade awscli
+  - sls plugin install -n serverless-python-requirements
 
 - Be sure to have the following env vars in your environment:
   - SLACK_CHANNEL_ID="slack-channel-id"
@@ -38,8 +38,8 @@ Using Cloud9 makes setup a breeze. If you create an instance, you might need to 
 For polly to work, you need to connect a speaker to the deeplens, add records of type "joke", "fact", and "quote" to the dynamodb info table. The type of item selected depends on the emotion detected on the person's face.
 
 If you want your recognized team members to receive an email:
- - Add records to the dynamodb info table with the type "news"
- - Re-comment back in the "send_email" function call in train.py
+- Add records to the dynamodb info table with the type "news"
+- Re-comment back in the "send_email" function call in train.py
 
 That should be it. Whenever the Deeplens rekognizes someone, it will upload into the S3 bucket. Which will trigger the other lambda functions.
 
@@ -48,7 +48,7 @@ Architecture
 Original Architecture
 ![Architecture](https://challengepost-s3-challengepost.netdna-ssl.com/photos/production/software_photos/000/602/534/datas/gallery.jpg)
 
-Design Floa
+Design Flow
 ![Design Flow](deeplens-project-design.png)
 
 Video
