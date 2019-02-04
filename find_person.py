@@ -6,7 +6,7 @@
 #*****************************************************
 """ A sample lambda for object detection"""
 from threading import Thread, Event, Timer
-import os
+import os, sys
 import json
 import numpy as np
 import awscam
@@ -17,12 +17,26 @@ import base64
 from datetime import datetime, timedelta
 from botocore.session import Session
 
+from boto3 import client
+import boto3
+import io
+from contextlib import closing
+
+here = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(here, "vendored"))
+
 # Setup the S3 client
 session = Session()
 s3 = session.create_client('s3')
 s3_bucket = os.environ['BUCKET_NAME']
 #rekognition_collection_id = os.environ['REKOGNITION_COLLECTION_ID']
 #rekognition = session.create_client('rekognition')
+
+# Setup sqs queue
+aws_region = 'us-east-1'
+polly_queue_name = os.environ['QUEUE_NAME']
+sqs = boto3.resource(service_name='sqs', region_name=aws_region)
+polly_queue = sqs.get_queue_by_name(QueueName=polly_queue_name)
 
 class LocalDisplay(Thread):
     """ Class for facilitating the local display of inference results
@@ -119,6 +133,39 @@ def greengrass_infinite_infer_run():
 
         # Do inference until the lambda is killed.
         while True:
+            
+            # Pull polly messages from queue
+            try:
+                for message in polly_queue.receive_messages():
+                    client.publish(topic=iot_topic, payload="Loading Polly Message: %s" % message.body)
+                    polly_text = message.body
+                    polly_client = boto3.client('polly', region_name=aws_region)
+                    polly_response = polly_client.synthesize_speech(
+                        OutputFormat='mp3',
+                        Text=polly_text,
+                        TextType='text',
+                        VoiceId='Joanna'
+                    )
+                    
+                    if "AudioStream" in polly_response:
+                        with closing(polly_response["AudioStream"]) as stream:
+                            # Write file to temporary directory
+                            polly_data = stream.read()
+                            polly_filename = "/tmp/polly_file.mp3"
+                            polly_file = open(polly_filename, "w")
+                            polly_file.write(polly_data)
+                            polly_file.close()
+                            
+                            client.publish(topic=iot_topic, payload="Polly: Playing audio")
+                            os.system('mplayer ' + polly_filename)
+                    
+                    client.publish(topic=iot_topic, payload="Polly: Deleting message from queue")
+                    message.delete()
+                    
+            except Exception as ex:
+                #[Errno 2] No such file or directory
+                client.publish(topic=iot_topic, payload='Error in polly integration: {}'.format(ex))
+            
             # Get a frame from the video stream
             ret, frame = awscam.getLastFrame()
             if not ret:

@@ -11,7 +11,7 @@
 #
 # Happy Coding!
 
-service: doormantest
+service: sample-deeplens
 
 custom:
   pythonRequirements:
@@ -23,7 +23,6 @@ provider:
 
 # you can overwrite defaults here
   stage: dev
-#  region: us-west-2
 
 # you can add statements to the Lambda function's IAM Role here
   iamRoleStatements:
@@ -38,44 +37,57 @@ provider:
        - "s3:PutObject"
        - "s3:PutObjectAcl"
        - "s3:GetObject"
+       - "s3:GetObjectAcl"
        - "s3:DeleteObject"
+       - "s3:ListBucket"
       Resource:
         - "arn:aws:s3:::${env:BUCKET_NAME}/*"
-
- #   - Effect: "Allow"
- #     Action:
- #       - "s3:ListBucket"
- #     Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
- #   - Effect: "Allow"
- #     Action:
- #       - "s3:PutObject"
- #     Resource:
- #       Fn::Join:
- #         - ""
- #         - - "arn:aws:s3:::"
- #           - "Ref" : "ServerlessDeploymentBucket"
- #           - "/*"
+    - Effect: "Allow"
+      Action:
+       - "dynamodb:PutItem"
+       - "dynamodb:GetItem"
+       - "dynamodb:UpdateItem"
+       - "dynamodb:Query"
+      Resource:
+        - "arn:aws:dynamodb:${env:AWS_REGION}:${env:AWS_ACCOUNT_NUMBER}:table/${env:DYNAMODB_USERS}"
+        - "arn:aws:dynamodb:${env:AWS_REGION}:${env:AWS_ACCOUNT_NUMBER}:table/${env:DYNAMODB_INFO}"
+    - Effect: "Allow"
+      Action:
+       - "rekognition:ListFaces"
+       - "rekognition:DeleteFaces"
+      Resource:
+        - "arn:aws:rekognition:${env:AWS_REGION}:${env:AWS_ACCOUNT_NUMBER}:collection/${env:REKOGNITION_COLLECTION_ID}"
+    - Effect: "Allow"
+      Action:
+       - "ses:SendEmail"
+      Resource:
+        - "arn:aws:ses:${env:AWS_REGION}:${env:AWS_ACCOUNT_NUMBER}:identity/*"
+    - Effect: "Allow"
+      Action:
+       - "kms:Decrypt"
+      Resource:
+        - "arn:aws:kms:*:*:*"
+    - Effect: "Allow"
+      Action:
+        - "sqs:SendMessage"
+        - "sqs:GetQueueUrl"
+      Resource: "arn:aws:sqs:${env:AWS_REGION}:${env:AWS_ACCOUNT_NUMBER}:${env:QUEUE_NAME}"
+    - Effect: "Allow"
+      Action:
+        - "sqs:ListQueues"
+      Resource: "arn:aws:sqs:${env:AWS_REGION}:${env:AWS_ACCOUNT_NUMBER}:*"
 
 # you can define service wide environment variables here
   environment:
     BUCKET_NAME: ${env:BUCKET_NAME}
+    QUEUE_NAME: ${env:QUEUE_NAME}
     SLACK_API_TOKEN: ${env:SLACK_API_TOKEN}
     SLACK_CHANNEL_ID: ${env:SLACK_CHANNEL_ID}
     SLACK_TRAINING_CHANNEL_ID: ${env:SLACK_TRAINING_CHANNEL_ID}
     REKOGNITION_COLLECTION_ID: ${env:REKOGNITION_COLLECTION_ID}
-    TRUPORTAL_USERNAME: ${env:TRUPORTAL_USERNAME}
-    TRUPORTAL_PASSWORD: ${env:TRUPORTAL_PASSWORD}
-    DOOR_ID: ${env:DOOR_ID}
-    TRUPORTAL_IP: ${env:TRUPORTAL_IP}
-# you can add packaging information here
-#package:
-#  include:
-#    - include-me.py
-#    - include-me-dir/**
-#  exclude:
-#    - exclude-me.py
-#    - exclude-me-dir/**
-
+    DYNAMODB_USERS: ${env:DYNAMODB_USERS}
+    DYNAMODB_INFO: ${env:DYNAMODB_INFO}
+    EMAIL_SOURCE: ${env:EMAIL_SOURCE}
 
 functions:
   guess:
@@ -100,24 +112,85 @@ functions:
       - http:
           path: faces/train
           method: post
-  truportalevents:
-    handler: handler.truportalevents
-    events:
-      - schedule: rate(1 minute)
+  deleterekognition:
+    handler: handler.deleterekognition
+  
+  batchTrain:
+    handler: handler.batchTrain
 
   # find person, function for greengrass device
   find-person:
     handler: find_person.function_handler
     runtime: python2.7
-    role: arn:aws:iam::546464786011:role/service-role/AWSDeepLensLambdaRole
+    role: arn:aws:iam::${env:AWS_ACCOUNT_NUMBER}:role/service-role/AWSDeepLensLambdaRole
 
-# resources:
-#   Resources:
-#     S3BucketDoormanfaces:
-#       Type: AWS::S3::Bucket
-#       Properties:
-#         BucketName: ${env:BUCKET_NAME}
-#         # add additional custom bucket configuration here
-#
 plugins:
   - serverless-python-requirements
+resources:
+  Resources:
+    PollyQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: ${env:QUEUE_NAME}
+    DynamoDbUsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${env:DYNAMODB_USERS}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+    DynamoDBUsersPolicy:
+      Type: AWS::IAM::Policy
+      DependsOn: DynamoDbUsersTable
+      Properties:
+        PolicyName: lambda-dynamodb
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource: arn:aws:dynamodb:*:*:table/my-table
+        Roles:
+          - Ref: IamRoleLambdaExecution
+    DynamoDbInfoTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${env:DYNAMODB_INFO}
+        AttributeDefinitions:
+          - AttributeName: type
+            AttributeType: S
+          - AttributeName: datetime
+            AttributeType: S
+        KeySchema:
+          - AttributeName: type
+            KeyType: HASH
+          - AttributeName: datetime
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+    DynamoDBInfoIamPolicy:
+      Type: AWS::IAM::Policy
+      DependsOn: DynamoDbInfoTable
+      Properties:
+        PolicyName: lambda-dynamodb
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource: arn:aws:dynamodb:*:*:table/my-table
+        Roles:
+          - Ref: IamRoleLambdaExecution

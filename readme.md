@@ -2,20 +2,24 @@ Doorman
 -------
 This will greet your coworkers on slack when they enter the office.
 
-This was send in as part of the [AWS Deeplens Hackaton](https://devpost.com/software/doorman-a1oh0e)
+This was based in part on the [AWS Deeplens Hackaton](https://devpost.com/software/doorman-a1oh0e)
 
 
 Setup
 -----
 Quite a few steps, needs cleanup, most of it can be automated.
 
-- Create a bucket, remember the name, make sure that your deeplens user can write to this bucket.
-- Create a Rekognition collection (and note the collecition id)
+Using Cloud9 makes setup a breeze. If you create an instance, you might need to execute the following commands:
+ - npm install -g serverless
+ - sudo yum install jq
+ - pip install --user pipenv
+ - sudo pip install --upgrade awscli
+ - sls plugin install -n serverless-python-requirements
+
 - Be sure to have the following env vars in your environment:
-  - BUCKET_NAME=your-bucket-name
-  - SLACK_API_TOKEN=your-slack-token
   - SLACK_CHANNEL_ID="slack-channel-id"
-  - REKOGNITION_COLLECTION_ID="your-collection-id"
+  - SLACK_TRAINING_CHANNEL_ID="slack-channel-id"
+  - SLACK_API_TOKEN=your-slack-token
 
 - Deploy the lambda functions with Serverles (eg: `sls deploy`), this will create a CF stack with your functions. Note the api gateway endpoint, you'll need it later
 
@@ -31,11 +35,21 @@ Quite a few steps, needs cleanup, most of it can be automated.
   - Permissions: Install the app in your workspace, and note the token. You'll need `chat:write:bot`, `channels:read` and `incoming-webhook`.
 - Deploy the app again with the new environment variables
 
+For polly to work, you need to connect a speaker to the deeplens, add records of type "joke", "fact", and "quote" to the dynamodb info table. The type of item selected depends on the emotion detected on the person's face.
+
+If you want your recognized team members to receive an email:
+ - Add records to the dynamodb info table with the type "news"
+ - Re-comment back in the "send_email" function call in train.py
+
 That should be it. Whenever the Deeplens rekognizes someone, it will upload into the S3 bucket. Which will trigger the other lambda functions.
 
 Architecture
 ------------
+Original Architecture
 ![Architecture](https://challengepost-s3-challengepost.netdna-ssl.com/photos/production/software_photos/000/602/534/datas/gallery.jpg)
+
+Design Floa
+![Design Flow](deeplens-project-design.png)
 
 Video
 -----

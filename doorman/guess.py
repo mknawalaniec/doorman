@@ -3,152 +3,170 @@ import boto3
 import requests
 import hashlib
 import os
+import datetime
 
 bucket_name = os.environ['BUCKET_NAME']
 slack_token = os.environ['SLACK_API_TOKEN']
 slack_channel_id = os.environ['SLACK_CHANNEL_ID']
 slack_training_channel_id = os.environ['SLACK_TRAINING_CHANNEL_ID']
 rekognition_collection_id = os.environ['REKOGNITION_COLLECTION_ID']
-truportal_username = os.environ['TRUPORTAL_USERNAME']
-truportal_password = os.environ['TRUPORTAL_PASSWORD']
-door_id = os.environ['DOOR_ID']
-truportal_ip = os.environ['TRUPORTAL_IP']
+dynamodb_users = os.environ['DYNAMODB_USERS']
 
 def guess(event, context):
-    client = boto3.client('rekognition')
-    key = event['Records'][0]['s3']['object']['key']
-    event_bucket_name = event['Records'][0]['s3']['bucket']['name']
-    image = {
-        'S3Object': {
-            'Bucket': event_bucket_name,
-            'Name': key
-        }
-    }
-    # print(image)
-
-    s3 = boto3.resource('s3')
-
     try:
-        resp = client.search_faces_by_image(
-            CollectionId=rekognition_collection_id,
-            Image=image,
-            MaxFaces=1,
-            FaceMatchThreshold=70)
-
-    except Exception as ex:
-        # no faces detected, delete image
-        print("No faces found, deleting")
-        s3.Object(bucket_name, key).delete()
-        return
-
-    if len(resp['FaceMatches']) == 0:
-        # no known faces detected, let the users decide in slack
-        print("No matches found, sending to unknown")
-        new_key = 'unknown/%s.jpg' % hashlib.md5(key.encode('utf-8')).hexdigest()
-        s3.Object(bucket_name, new_key).copy_from(CopySource='%s/%s' % (bucket_name, key))
-        s3.ObjectAcl(bucket_name, new_key).put(ACL='public-read')
-        s3.Object(bucket_name, key).delete()
-        return
-    else:
+        client = boto3.client('rekognition')
+        key = event['Records'][0]['s3']['object']['key']
+        event_bucket_name = event['Records'][0]['s3']['bucket']['name']
+        print(event)
+        
+        if key[-1] == '/':
+            print('incoming folder creation detected.')
+            return
+        
+        image = {
+            'S3Object': {
+                'Bucket': event_bucket_name,
+                'Name': key
+            }
+        }
+        print(image)
+    
+        s3 = boto3.resource('s3')
+    
+        try:
+            resp = client.search_faces_by_image(
+                CollectionId=rekognition_collection_id,
+                Image=image,
+                MaxFaces=1,
+                FaceMatchThreshold=70)
+    
+        except Exception as ex:
+            # no faces detected, delete image
+            print("No faces found, deleting")
+            print(ex)
+            s3.Object(bucket_name, key).delete()
+            return
+    
+        # if face not recognized at all
+        if len(resp['FaceMatches']) == 0:
+            # no known faces detected, let the users decide in slack
+            print("No matches found, sending to unknown")
+            new_key = 'unknown/%s.jpg' % hashlib.md5(key.encode('utf-8')).hexdigest()
+            s3.Object(bucket_name, new_key).copy_from(CopySource='%s/%s' % (bucket_name, key))
+            s3.ObjectAcl(bucket_name, new_key).put(ACL='public-read')
+            s3.Object(bucket_name, key).delete()
+            return
+        
+        # face found!
         print ("Face found")
         print (resp)
         user_id = resp['FaceMatches'][0]['Face']['ExternalImageId']
         similarity = resp['FaceMatches'][0]['Similarity']
-        # move image
+        
+        # if face similiarity is too low, throw into unmatched
+        if int(similarity) < 80:
+            # no known faces detected, let the users decide in slack
+            print("No matches found, sending to unknown")
+            new_key = 'unknown/%s.jpg' % hashlib.md5(key.encode('utf-8')).hexdigest()
+            s3.Object(bucket_name, new_key).copy_from(CopySource='%s/%s' % (bucket_name, key))
+            s3.ObjectAcl(bucket_name, new_key).put(ACL='public-read')
+            s3.Object(bucket_name, key).delete()
+            return
+        
+        # check first, that the user hasn't been recognized within a certain time period
+        dynamo = boto3.resource('dynamodb')
+        users_table = dynamo.Table(dynamodb_users)
+        user_details = users_table.get_item(Key={"id": user_id})
+        print(user_details)
+        
+        # Update last recognized time
+        newUpdatedtime = str(datetime.datetime.now())
+        users_table.update_item(
+            Key={'id': user_id},
+            UpdateExpression="set lastRecognizedTime = :t",
+            ExpressionAttributeValues={
+                ':t': newUpdatedtime
+            },
+            ReturnValues="UPDATED_NEW"
+        )
+        
+        if 'lastRecognizedTime' in user_details['Item']:
+            user_lastRecognizedTime = user_details['Item']['lastRecognizedTime']
+        
+            print ('check the time diff')
+            lastRecognizedTime = datetime.datetime.strptime(user_lastRecognizedTime, "%Y-%m-%d %H:%M:%S.%f")
+            print(lastRecognizedTime)
+            
+            currTime = datetime.datetime.now()
+            print(currTime)
+            
+            difference = currTime - lastRecognizedTime
+            print(difference)
+            print(difference.seconds)
+            print(difference.days)
+        
+            if difference.seconds < 1200 and difference.days == 0:
+                print('user has been recognized within {} minutes, which is under the threshold of 20 minutes.'.format(difference.seconds/60))
+                s3.Object(bucket_name, key).delete()
+                return
+            
+        # otherwise, if above threshhold, move to deteched folder and process
         new_key = 'detected/%s/%s.jpg' % (user_id, hashlib.md5(key.encode('utf-8')).hexdigest())
         s3.Object(bucket_name, new_key).copy_from(CopySource='%s/%s' % (event_bucket_name, key))
         s3.ObjectAcl(bucket_name, new_key).put(ACL='public-read')
         s3.Object(bucket_name, key).delete()
-
-        # fetch the username for this user_id
-        data = {
-            "token": slack_token,
-            "user": user_id
-        }
-        print(data)
-        resp = requests.post("https://slack.com/api/users.info", data=data)
-        print(resp.content)
-        print(resp.json())
-        username = resp.json()['user']['name']
-        userid = resp.json()['user']['id']
-
-        if int(similarity) > 80:
-            data = {
-                "channel": slack_channel_id,
-                "text": "Matched: {} (Similarity: {:.2f}%)".format(username, similarity),
-                "link_names": True,
-                "attachments": [
-                    {
-                        "image_url": "https://s3.amazonaws.com/%s/%s" % (bucket_name, new_key),
-                        "fallback": "Nope?",
-                        "callback_id": new_key,
-                        "attachment_type": "default"
-                    }
-                ]
-            }
-            resp = requests.post("https://slack.com/api/chat.postMessage", headers={'Content-Type':'application/json;charset=UTF-8', 'Authorization': 'Bearer %s' % slack_token}, json=data)
-
+    
+        # fetch db
+        client = boto3.resource('dynamodb')
+        table = client.Table(dynamodb_users)
+    
+        # fetch user information
+        user_details = table.get_item(Key={"id": user_id})
+        print(user_details)
+        user_name = user_details['Item']['name']
+        user_email = user_details['Item']['email']
+        user_lastEmailedTime = user_details['Item']['lastEmailedTime']
+    
+        # alert user
         data = {
             "channel": slack_training_channel_id,
-            "text": "Matched: {} (Similarity: {:.2f}%)".format(username, similarity),
-            "link_names": True,
+            "text": "Welcome {}! Can we use this new image to better identify you in the future?".format(user_name),
             "attachments": [
                 {
                     "image_url": "https://s3.amazonaws.com/%s/%s" % (bucket_name, new_key),
                     "fallback": "Nope?",
                     "callback_id": new_key,
                     "attachment_type": "default",
-                    "actions": [{
-                            "name": "username",
-                            "text": "Select a username...",
-                            "type": "select",
-                            "data_source": "users"
-                        },
+                    "actions": [
                         {
                             "name": "username",
-                            "text": "Guess Was Right",
-                            "style": "primary",
+                            "text": "Yes",
                             "type": "button",
-                            "value": userid
+                            "value": user_id
+                        },
+                        {
+                            "name": "discard",
+                            "text": "Ignore",
+                            "style": "danger",
+                            "type": "button",
+                            "value": "ignore",
+                            "confirm": {
+                                "title": "Are you sure?",
+                                "text": "Are you sure you want to ignore and delete this image?",
+                                "ok_text": "Yes",
+                                "dismiss_text": "No"
+                            }
                         }
                     ]
                 }
             ]
         }
-
-
+        
         resp = requests.post("https://slack.com/api/chat.postMessage", headers={'Content-Type':'application/json;charset=UTF-8', 'Authorization': 'Bearer %s' % slack_token}, json=data)
-
-        data = {
-            "username": truportal_username,
-            "password": truportal_password
-        }
-
-        headers = {
-            'Content-Type': 'application/json'
-        }
-
-        auth_url = "https://%s/api/auth/login" % truportal_ip
-
-        print(auth_url)
-
-        resp = requests.post(auth_url, verify=False, headers=headers, json=data)
-
         print(resp.json())
-
-        session_key = resp.json()['sessionKey']
-
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': session_key
-        }
-
-        door_url = "https://%s/api/devices/doors/%s/state?command=grant-access" % (truportal_ip, door_id)
-
-        print(door_url)
-
-        #resp = requests.post(door_url, verify=False, headers=headers, json=data)
-
-        print(resp.json())
-
+    
         return {}
+        
+    except Exception as ex:
+        print("guess.py encountered an error")
+        print(ex)
