@@ -9,17 +9,12 @@ Setup
 -----
 Quite a few steps, needs cleanup, most of it can be automated.
 
-- Using Cloud9 makes setup a breeze. If you create an instance, you might need to execute the following commands:
+- Using Cloud9 makes setup a breeze. If you create an instance, you might need to execute the following commands in the terminal window:
   - npm install -g serverless
   - sudo yum install jq
   - pip install --user pipenv
   - sudo pip install --upgrade awscli
   - sls plugin install -n serverless-python-requirements
-
-- Be sure to have the following env vars in your environment:
-  - SLACK_CHANNEL_ID="slack-channel-id"
-  - SLACK_TRAINING_CHANNEL_ID="slack-channel-id"
-  - SLACK_API_TOKEN=your-slack-token
 
 - Deploy the lambda functions with Serverles (eg: `sls deploy`), this will create a CF stack with your functions. Note the api gateway endpoint, you'll need it later
 
@@ -33,6 +28,11 @@ Quite a few steps, needs cleanup, most of it can be automated.
   - Incoming webhooks
   - Interactive components (use the api gateway endpoint that you noted before, ignore `Load URL`)
   - Permissions: Install the app in your workspace, and note the token. You'll need `chat:write:bot`, `channels:read` and `incoming-webhook`.
+
+- Now that the app is setup, set following env vars in your environment using the terminal:
+  - SLACK_CHANNEL_ID="slack-channel-id"
+  - SLACK_TRAINING_CHANNEL_ID="slack-channel-id"
+  - SLACK_API_TOKEN=your-slack-token
 - Deploy the app again with the new environment variables
 
 For polly to work, you need to connect a speaker to the deeplens, add records of type "joke", "fact", and "quote" to the dynamodb info table. The type of item selected depends on the emotion detected on the person's face.
