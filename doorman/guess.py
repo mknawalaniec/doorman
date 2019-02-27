@@ -126,7 +126,24 @@ def guess(event, context):
         user_name = user_details['Item']['name']
         user_email = user_details['Item']['email']
         user_lastEmailedTime = user_details['Item']['lastEmailedTime']
+
+        # alert taining lambda
+        # NOTE: To use this function call, you'll need to define an environment variable of TRAIN_API
+        #       in serverless.yml and environment.sh, and set the value to the train API uri
+        #call_train_lambda(user_id, new_key)
     
+        # alert user
+        call_slack(user_id, user_name, new_key)
+    
+        return {}
+        
+    except Exception as ex:
+        print("guess.py encountered an error")
+        print(ex)
+
+
+def call_slack(user_id, user_name, new_key):
+    try:
         # alert user
         data = {
             "channel": slack_training_channel_id,
@@ -164,9 +181,32 @@ def guess(event, context):
         
         resp = requests.post("https://slack.com/api/chat.postMessage", headers={'Content-Type':'application/json;charset=UTF-8', 'Authorization': 'Bearer %s' % slack_token}, json=data)
         print(resp.json())
-    
-        return {}
         
     except Exception as ex:
-        print("guess.py encountered an error")
+        print("guess.py call_slack encountered an error")
+        print(ex)
+        
+
+def call_train_lambda(user_id, new_key):
+    try:
+        # alert taining lambda
+        payload_content = {
+            "type": "interactive_message",
+            "actions": [
+                {
+                    "name": "username",
+                    "value": user_id
+                }
+            ],
+            "callback_id": new_key,
+            "response_url": ""
+        }
+        payload = json.dumps(payload_content)
+        data = urllib.parse.urlencode( { "payload": payload } )
+        
+        resp = requests.post(os.environ['TRAIN_API'], headers={'Content-Type':'application/json;charset=UTF-8'}, data=data)
+        print(resp)
+        
+    except Exception as ex:
+        print("guess.py call_train_lambda encountered an error")
         print(ex)

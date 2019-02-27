@@ -227,19 +227,20 @@ def train_user(response_url, user, key):
     s3.Object(bucket_name, key).delete()
     
     # post slack reply
-    message = {
-        "response_type": "in_channel",
-        "text": "Thank you! Your new picture was successfully imported into the recognition engine. %s" % emotion_text,
-        "attachments": [
-            {
-                "image_url": "https://s3.amazonaws.com/%s/%s" % (bucket_name, new_key),
-                "fallback": "Nope?",
-                "attachment_type": "default",
-            }
-        ]
-    }
-    print(message)
-    requests.post(response_url, headers={'Content-Type':'application/json;charset=UTF-8', 'Authorization': 'Bearer %s' % slack_token}, json=message)
+    if response_url:
+        message = {
+            "response_type": "in_channel",
+            "text": "Thank you! Your new picture was successfully imported into the recognition engine. %s" % emotion_text,
+            "attachments": [
+                {
+                    "image_url": "https://s3.amazonaws.com/%s/%s" % (bucket_name, new_key),
+                    "fallback": "Nope?",
+                    "attachment_type": "default",
+                }
+            ]
+        }
+        print(message)
+        requests.post(response_url, headers={'Content-Type':'application/json;charset=UTF-8', 'Authorization': 'Bearer %s' % slack_token}, json=message)
     
     # Send email
     #send_email(user)
