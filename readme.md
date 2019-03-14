@@ -14,6 +14,7 @@ Quite a few steps, needs cleanup, most of it can be automated.
   - sudo yum install jq
   - pip install --user pipenv
   - sudo pip install --upgrade awscli
+        if that command does not work, sudo python -m pip install --upgrade awscli 
   - sls plugin install -n serverless-python-requirements
 
 - Deploy the lambda functions with Serverles (eg: `sls deploy`), this will create a CF stack with your functions. Note the api gateway endpoint, you'll need it later
@@ -41,7 +42,7 @@ If you want your recognized team members to receive an email:
 - Add records to the dynamodb info table with the type "news"
 - Re-comment back in the "send_email" function call in train.py
 
-That should be it. Whenever the Deeplens rekognizes someone, it will upload into the S3 bucket. Which will trigger the other lambda functions.
+That should be it. Whenever the Deeplens recognizes someone, it will upload into the S3 bucket. Which will trigger the other lambda functions.
 
 Architecture
 ------------

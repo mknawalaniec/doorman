@@ -11,7 +11,7 @@
 #
 # Happy Coding!
 
-service: sample-deeplens
+service: EYH2019-mkn
 
 custom:
   pythonRequirements:
@@ -28,9 +28,9 @@ provider:
   iamRoleStatements:
     - Effect: "Allow"
       Action:
-        - "rekognition:DetectFaces"
-        - "rekognition:SearchFacesByImage"
-        - "rekognition:IndexFaces"
+        - "recognition:DetectFaces"
+        - "recognition:SearchFacesByImage"
+        - "recognition:IndexFaces"
       Resource: "*"
     - Effect: "Allow"
       Action:
@@ -53,10 +53,10 @@ provider:
         - "arn:aws:dynamodb:${env:AWS_REGION}:${env:AWS_ACCOUNT_NUMBER}:table/${env:DYNAMODB_INFO}"
     - Effect: "Allow"
       Action:
-       - "rekognition:ListFaces"
-       - "rekognition:DeleteFaces"
+       - "recognition:ListFaces"
+       - "recognition:DeleteFaces"
       Resource:
-        - "arn:aws:rekognition:${env:AWS_REGION}:${env:AWS_ACCOUNT_NUMBER}:collection/${env:REKOGNITION_COLLECTION_ID}"
+        - "arn:aws:recognition:${env:AWS_REGION}:${env:AWS_ACCOUNT_NUMBER}:collection/${env:RECOGNITION_COLLECTION_ID}"
     - Effect: "Allow"
       Action:
        - "ses:SendEmail"
@@ -84,7 +84,7 @@ provider:
     SLACK_API_TOKEN: ${env:SLACK_API_TOKEN}
     SLACK_CHANNEL_ID: ${env:SLACK_CHANNEL_ID}
     SLACK_TRAINING_CHANNEL_ID: ${env:SLACK_TRAINING_CHANNEL_ID}
-    REKOGNITION_COLLECTION_ID: ${env:REKOGNITION_COLLECTION_ID}
+    RECOGNITION_COLLECTION_ID: ${env:RECOGNITION_COLLECTION_ID}
     DYNAMODB_USERS: ${env:DYNAMODB_USERS}
     DYNAMODB_INFO: ${env:DYNAMODB_INFO}
     EMAIL_SOURCE: ${env:EMAIL_SOURCE}
@@ -112,8 +112,8 @@ functions:
       - http:
           path: faces/train
           method: post
-  deleterekognition:
-    handler: handler.deleterekognition
+  deleterecognition:
+    handler: handler.deleterecognition
   
   batchTrain:
     handler: handler.batchTrain

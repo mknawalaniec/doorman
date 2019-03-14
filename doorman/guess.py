@@ -9,12 +9,12 @@ bucket_name = os.environ['BUCKET_NAME']
 slack_token = os.environ['SLACK_API_TOKEN']
 slack_channel_id = os.environ['SLACK_CHANNEL_ID']
 slack_training_channel_id = os.environ['SLACK_TRAINING_CHANNEL_ID']
-rekognition_collection_id = os.environ['REKOGNITION_COLLECTION_ID']
+recognition_collection_id = os.environ['RECOGNITION_COLLECTION_ID']
 dynamodb_users = os.environ['DYNAMODB_USERS']
 
 def guess(event, context):
     try:
-        client = boto3.client('rekognition')
+        client = boto3.client('recognition')
         key = event['Records'][0]['s3']['object']['key']
         event_bucket_name = event['Records'][0]['s3']['bucket']['name']
         print(event)
@@ -35,7 +35,7 @@ def guess(event, context):
     
         try:
             resp = client.search_faces_by_image(
-                CollectionId=rekognition_collection_id,
+                CollectionId=recognition_collection_id,
                 Image=image,
                 MaxFaces=1,
                 FaceMatchThreshold=70)

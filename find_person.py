@@ -29,8 +29,8 @@ sys.path.append(os.path.join(here, "vendored"))
 session = Session()
 s3 = session.create_client('s3')
 s3_bucket = os.environ['BUCKET_NAME']
-#rekognition_collection_id = os.environ['REKOGNITION_COLLECTION_ID']
-#rekognition = session.create_client('rekognition')
+#recognition_collection_id = os.environ['RECOGNITION_COLLECTION_ID']
+#recognition = session.create_client('recognition')
 
 # Setup sqs queue
 aws_region = 'us-east-1'
@@ -217,7 +217,7 @@ def greengrass_infinite_infer_run():
                                 #image = base64.b64encode(person)
 
                                 #resp = client.search_faces_by_image(
-                                #    CollectionId=rekognition_collection_id,
+                                #    CollectionId=recognition_collection_id,
                                 #    Image=image,
                                 #    MaxFaces=1,
                                 #    FaceMatchThreshold=70)
