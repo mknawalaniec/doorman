@@ -215,10 +215,11 @@ def train_user(response_url, user, key):
     else:
         print("No {} could be found. Please make sure that there is data entered for that type.".format(emotion_details['type'].lower()))
         
-    # drop emotion_text value onto an SQS queue
+    # drop greeting onto an SQS queue
     sqs = boto3.resource(service_name='sqs', region_name='us-east-1')
-    polly_queue = sqs.get_queue_by_name(QueueName=polly_queue_name)
-    polly_queue.send_message(MessageBody="Hello %s! %s" % (user.name, emotion_text))
+    greeting_text = getIceBreakerQuestion()
+    polly_queue = sqs.get_queue_by_name(QueueName=polly_queue_name)    
+    polly_queue.send_message(MessageBody="Hello %s! %s" % (user.name, greeting_text))
     
     # move the s3 file to the 'trained' location
     s3 = boto3.resource('s3')
@@ -356,6 +357,20 @@ def get_emotion_details(rekognition_response):
             'confidence': 0,
             'type': 'FACT'
         }
+
+def getIceBreakerQuestion():
+    iceBreakers = ["What is your favorite animal?",
+                    "What is your favorite food?",
+                    "What is your favorite movie or TV show?",
+                    "Who is one of your favorite singers or bands?",
+                    "What is your dream job?"]
+    
+    count = iceBreakers['Count']
+    
+    # accounts for array starting at index 0
+    random_int = random.randint(0, count-1)
+    
+    return iceBreakers[random_int]
         
 def getUser(user_id):
     # fetch db
