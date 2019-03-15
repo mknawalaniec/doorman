@@ -10,10 +10,15 @@ Setup
 Quite a few steps, needs cleanup, most of it can be automated.
 
 - Using Cloud9 makes setup a breeze. If you create an instance, you might need to execute the following commands in the terminal window:
+In Cloud 9, go to the gear icon in the upper right hand corner and navigate to project settings -> Python Support. Make sure the Python Version is Python 3. 
+To use Python 3, use pip3 in commands instead of pip
+-sudo yum -y install python36 # Installs Python 3.6.
   - npm install -g serverless
   - sudo yum install jq
   - pip install --user pipenv
   - sudo pip install --upgrade awscli
+        if that command does not work, sudo python -m pip install --upgrade awscli 
+  - source environment.sh
   - sls plugin install -n serverless-python-requirements
 
 - Deploy the lambda functions with Serverles (eg: `sls deploy`), this will create a CF stack with your functions. Note the api gateway endpoint, you'll need it later
@@ -54,3 +59,7 @@ Design Flow
 Video
 -----
 [![Video](https://img.youtube.com/vi/UXVD22jDbu8/0.jpg)](https://www.youtube.com/watch?v=UXVD22jDbu8)
+
+
+Common Problems:
+The role defined for the function cannot be assumed by the lambda. Solution here: https://silvaneves.org/the-role-defined-for-the-function-cannot-be-assumed-by-lambda/
