@@ -9,7 +9,7 @@ bucket_name = os.environ['BUCKET_NAME']
 slack_token = os.environ['SLACK_API_TOKEN']
 slack_channel_id = os.environ['SLACK_CHANNEL_ID']
 slack_training_channel_id = os.environ['SLACK_TRAINING_CHANNEL_ID']
-recognition_collection_id = os.environ['RECOGNITION_COLLECTION_ID']
+rekognition_collection_id = os.environ['REKOGNITION_COLLECTION_ID']
 
 
 def unknown(event, context):

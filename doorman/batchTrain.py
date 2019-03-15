@@ -9,7 +9,7 @@ import random
 batch_email_domain = "sample.org"
 bucket_name = os.environ['BUCKET_NAME']
 dynamodb_users = os.environ['DYNAMODB_USERS']
-recognition_collection_id = os.environ['RECOGNITION_COLLECTION_ID']
+rekognition_collection_id = os.environ['REKOGNITION_COLLECTION_ID']
 dynamodb_info = os.environ['DYNAMODB_INFO']
 
 def batchTrain(event, context):
@@ -48,7 +48,7 @@ def trainFaces(event, context):
 
 	# init aws resource clients
 	table = boto3.resource('dynamodb').Table(dynamodb_users)
-	recClient = boto3.client('recognition')
+	rekClient = boto3.client('rekognition')
 	s3 = boto3.client('s3')
 	s3Resource = boto3.resource('s3')
 
@@ -102,8 +102,8 @@ def trainFaces(event, context):
 
 		# response is send, start training
 		
-		resp = recClient.index_faces(
-			CollectionId=recognition_collection_id,
+		resp = rekClient.index_faces(
+			CollectionId=rekognition_collection_id,
 			Image={
 				'S3Object': {
 					'Bucket': bucket_name,

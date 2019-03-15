@@ -12,7 +12,7 @@ import random
 bucket_name = os.environ['BUCKET_NAME']
 slack_token = os.environ['SLACK_API_TOKEN']
 slack_channel_id = os.environ['SLACK_CHANNEL_ID']
-recognition_collection_id = os.environ['RECOGNITION_COLLECTION_ID']
+rekognition_collection_id = os.environ['REKOGNITION_COLLECTION_ID']
 dynamodb_users = os.environ['DYNAMODB_USERS']
 dynamodb_info = os.environ['DYNAMODB_INFO']
 email_source = os.environ['EMAIL_SOURCE']
@@ -165,9 +165,9 @@ def train_user(response_url, user, key):
     new_key = 'trained/%s/%s.jpg' % (user.id, hashlib.md5(key.encode('utf-8')).hexdigest())
     
     # response is send, start training
-    client = boto3.client('recognition')
-    recognition_response = client.index_faces(
-        CollectionId=recognition_collection_id,
+    client = boto3.client('rekognition')
+    rekognition_response = client.index_faces(
+        CollectionId=rekognition_collection_id,
         Image={
             'S3Object': {
                 'Bucket': bucket_name,
@@ -177,10 +177,10 @@ def train_user(response_url, user, key):
         ExternalImageId=user.id,
         DetectionAttributes=['ALL']
     )
-    print(recognition_response)
+    print(rekognition_response)
     
     # get emotion details
-    emotion_details = get_emotion_details(recognition_response)
+    emotion_details = get_emotion_details(rekognition_response)
     if emotion_details['emotion'] == "UNKNOWN":
         emotion_text = "\n\nI can't really tell what you're feeling at the moment. "
     else:
@@ -320,12 +320,12 @@ def send_email(user):
             print(ex)
 
 
-def get_emotion_details(recognition_response):
-    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/recognition.html#Rekognition.Client.index_faces
+def get_emotion_details(rekognition_response):
+    # docs: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/rekognition.html#Rekognition.Client.index_faces
     # process image attributes
     try:
         # pull off emotions details
-        face_detail = recognition_response['FaceRecords'][0]['FaceDetail']
+        face_detail = rekognition_response['FaceRecords'][0]['FaceDetail']
         
         # find emotion with highest confidence
         emotion = "UNKNOWN"
