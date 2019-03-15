@@ -122,7 +122,7 @@ functions:
   find-person:
     handler: find_person.function_handler
     runtime: python2.7
-    role: arn:aws:iam::${env:AWS_ACCOUNT_NUMBER}:role/service-role/AWSDeepLensLambdaRole
+    role: arn:aws:iam::${env:AWS_ACCOUNT_NUMBER}:role/AWSDeepLensLambdaRole
 
 plugins:
   - serverless-python-requirements
