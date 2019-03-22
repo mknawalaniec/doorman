@@ -16,7 +16,7 @@ rekognition_collection_id = os.environ['REKOGNITION_COLLECTION_ID']
 dynamodb_users = os.environ['DYNAMODB_USERS']
 dynamodb_info = os.environ['DYNAMODB_INFO']
 email_source = os.environ['EMAIL_SOURCE']
-polly_queue_name = os.environ['QUEUE_NAME']
+polly_queue_name = 'sample-deeplens-polly-eyh'
 
 class DynamoUser:
     id = 0
@@ -217,7 +217,7 @@ def train_user(response_url, user, key):
         
     # drop emotion_text value onto an SQS queue
     sqs = boto3.resource(service_name='sqs', region_name='us-east-1')
-    polly_queue = sqs.get_queue_by_name(QueueName=polly_queue_name)
+    polly_queue = sqs.get_queue_by_name(QueueName='sample-deeplens-polly-eyh')
     polly_queue.send_message(MessageBody="Hello %s! %s" % (user.name, emotion_text))
     
     # move the s3 file to the 'trained' location

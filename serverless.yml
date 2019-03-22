@@ -71,7 +71,7 @@ provider:
       Action:
         - "sqs:SendMessage"
         - "sqs:GetQueueUrl"
-      Resource: "arn:aws:sqs:${env:AWS_REGION}:${env:AWS_ACCOUNT_NUMBER}:${env:QUEUE_NAME}"
+      Resource: "arn:aws:sqs:${env:AWS_REGION}:${env:AWS_ACCOUNT_NUMBER}:sample-deeplens-polly-eyh"
     - Effect: "Allow"
       Action:
         - "sqs:ListQueues"
@@ -122,7 +122,7 @@ functions:
   find-person:
     handler: find_person.function_handler
     runtime: python2.7
-    role: arn:aws:iam::${env:AWS_ACCOUNT_NUMBER}:role/service-role/AWSDeepLensLambdaRole
+    role: arn:aws:iam::${env:AWS_ACCOUNT_NUMBER}:role/sample-deeplens-dev-us-east-1-lambdaRole
 
 plugins:
   - serverless-python-requirements
