@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "dependencies": {},
   "devDependencies": {
-    "serverless-python-requirements": "^4.2.5",
-    "pydub": "==0.23.1"
+    "pydub": "==0.23.1",
+    "serverless-python-requirements": "^4.3.0"
   }
 }
