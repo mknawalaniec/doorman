@@ -32,11 +32,12 @@ s3_bucket = os.environ['BUCKET_NAME']
 #rekognition_collection_id = os.environ['REKOGNITION_COLLECTION_ID']
 #rekognition = session.create_client('rekognition')
 
-# Setup sqs queue
+# # Setup sqs queue
 aws_region = 'us-east-1'
 polly_queue_name = os.environ['QUEUE_NAME']
+print("Queue Name %s" + str(polly_queue_name))
 sqs = boto3.resource(service_name='sqs', region_name=aws_region)
-polly_queue = sqs.get_queue_by_name(QueueName=polly_queue_name)
+polly_queue = sqs.get_queue_url(QueueName=polly_queue_name)
 
 class LocalDisplay(Thread):
     """ Class for facilitating the local display of inference results
